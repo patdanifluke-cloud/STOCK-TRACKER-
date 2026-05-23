@@ -1,0 +1,1519 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Folio — Portfolio Tracker</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="/_sdk/data_sdk.js"></script>
+
+<style>
+/* ═══════════════════════════════════════
+   TOKENS
+═══════════════════════════════════════ */
+:root {
+  --bg:           #0D0F12;
+  --bg2:          #121519;
+  --bg3:          #181C22;
+  --bg4:          #1E242D;
+  --line:         rgba(255,255,255,0.06);
+  --line2:        rgba(255,255,255,0.10);
+  --t1:           #F2F4F8;
+  --t2:           #8B92A3;
+  --t3:           #555C6E;
+  --clay:         #CC785C;          /* Claude's warm terracotta */
+  --clay-dim:     rgba(204,120,92,0.12);
+  --clay-line:    rgba(204,120,92,0.28);
+  --sage:         #4A9A78;
+  --sage-dim:     rgba(74,154,120,0.12);
+  --sage-line:    rgba(74,154,120,0.28);
+  --rose:         #C25E6E;
+  --rose-dim:     rgba(194,94,110,0.11);
+  --rose-line:    rgba(194,94,110,0.28);
+  --sand:         #B8A47A;
+  --sand-dim:     rgba(184,164,122,0.10);
+  --blue:         #4F7FB5;
+  --blue-dim:     rgba(79,127,181,0.11);
+  --r: 20px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Geist', sans-serif;
+  background: var(--bg);
+  color: var(--t1);
+  min-height: 100dvh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.serif { font-family: 'Instrument Serif', Georgia, serif; }
+.mono  { font-family: 'Geist Mono', 'Courier New', monospace; }
+
+/* ── LAYOUT ── */
+.app { display: flex; flex-direction: column; height: 100dvh; width: 100%; }
+.scroll-area { flex: 1; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; }
+.scroll-area::-webkit-scrollbar { display: none; }
+.scroll-area { scrollbar-width: none; }
+
+/* ── BOTTOM NAV ── */
+.nav {
+  background: rgba(13,15,18,0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid var(--line);
+  padding: 0;
+}
+.nav-inner { display: grid; grid-template-columns: repeat(5, 1fr); max-width: 480px; margin: 0 auto; }
+.nav-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 10px 4px 14px;
+  gap: 4px;
+  font-size: 10px; font-weight: 500; letter-spacing: 0.3px;
+  color: var(--t3);
+  cursor: pointer; border: none; background: none;
+  transition: color 0.2s;
+  position: relative;
+}
+.nav-btn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.7; transition: all 0.2s; }
+.nav-btn.active { color: var(--clay); }
+.nav-btn.active::after {
+  content: '';
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 24px; height: 2px;
+  background: var(--clay);
+  border-radius: 0 0 3px 3px;
+}
+
+/* ── VIEW ── */
+.view { display: none; }
+.view.active { display: block; }
+.view-history.active { display: flex; flex-direction: column; }
+
+/* ── PAGE HEADER ── */
+.page-header {
+  padding: 52px 20px 20px;
+  max-width: 480px; margin: 0 auto;
+}
+.page-title { font-size: 28px; font-weight: 300; letter-spacing: -0.5px; line-height: 1.1; }
+.page-title em { font-family: 'Instrument Serif', serif; font-style: italic; color: var(--clay); }
+
+/* ── CARDS ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+.card-inner {
+  background: var(--bg3);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+/* ── HERO ── */
+.hero {
+  background: linear-gradient(145deg, #1A1410 0%, #141219 50%, #101420 100%);
+  border: 1px solid var(--line2);
+  border-radius: 24px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+}
+.hero::before {
+  content: '';
+  position: absolute; top: -60px; right: -60px;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(204,120,92,0.13) 0%, transparent 65%);
+  pointer-events: none;
+}
+.hero::after {
+  content: '';
+  position: absolute; bottom: -50px; left: -30px;
+  width: 160px; height: 160px;
+  background: radial-gradient(circle, rgba(74,154,120,0.07) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+/* ── TAGS ── */
+.tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 99px;
+  font-size: 11px; font-weight: 500;
+  font-family: 'Geist Mono', monospace;
+}
+.tag-up   { background: var(--sage-dim); border: 1px solid var(--sage-line); color: var(--sage); }
+.tag-dn   { background: var(--rose-dim); border: 1px solid var(--rose-line); color: var(--rose); }
+.tag-clay { background: var(--clay-dim); border: 1px solid var(--clay-line); color: var(--clay); }
+.tag-sand { background: var(--sand-dim); color: var(--sand); border: 1px solid rgba(184,164,122,0.2); }
+.tag-blue { background: var(--blue-dim); color: var(--blue); border: 1px solid rgba(79,127,181,0.25); }
+
+/* ── ALLOC BAR ── */
+.alloc-track {
+  height: 5px; border-radius: 99px;
+  background: var(--bg3);
+  overflow: hidden;
+  display: flex; gap: 2px;
+}
+.alloc-seg { height: 100%; border-radius: 99px; transition: flex 0.5s cubic-bezier(.4,0,.2,1); }
+
+/* ── PERIOD TABS ── */
+.period-tabs {
+  display: flex; gap: 4px;
+  background: var(--bg3);
+  border-radius: 10px;
+  padding: 3px;
+  border: 1px solid var(--line);
+}
+.period-tab {
+  flex: 1; padding: 6px 0;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.5px;
+  text-align: center; border-radius: 7px;
+  cursor: pointer; border: none; background: none;
+  color: var(--t3); transition: all 0.18s;
+}
+.period-tab.active { background: var(--bg4); color: var(--t1); box-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+
+/* ── PERFORMANCE ROW ── */
+.perf-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.perf-row:last-child { border-bottom: none; }
+
+/* ── INPUT SYSTEM ── */
+.f-label { font-size: 11px; font-weight: 500; color: var(--t2); margin-bottom: 5px; letter-spacing: 0.2px; }
+.f-input {
+  width: 100%; padding: 11px 14px;
+  background: var(--bg3); border: 1px solid var(--line2);
+  border-radius: 12px; color: var(--t1);
+  font-family: 'Geist', sans-serif; font-size: 14px;
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+.f-input:focus { border-color: var(--clay); box-shadow: 0 0 0 3px var(--clay-dim); }
+.f-input::placeholder { color: var(--t3); }
+.f-input option { background: #1E242D; }
+select.f-input { cursor: pointer; }
+
+/* ── SEG BUTTONS ── */
+.seg-grid { display: grid; gap: 6px; }
+.seg-btn {
+  padding: 10px 6px;
+  background: var(--bg3); border: 1px solid var(--line2);
+  border-radius: 10px; color: var(--t2);
+  font-size: 12px; font-weight: 600;
+  text-align: center; cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Geist', sans-serif;
+}
+.seg-btn:hover { background: var(--bg4); color: var(--t1); }
+.seg-btn.s-buy      { background: var(--sage-dim); border-color: var(--sage-line); color: var(--sage); }
+.seg-btn.s-sell     { background: var(--rose-dim); border-color: var(--rose-line); color: var(--rose); }
+.seg-btn.s-deposit  { background: var(--clay-dim); border-color: var(--clay-line); color: var(--clay); }
+.seg-btn.s-withdraw { background: var(--sand-dim); border-color: rgba(184,164,122,0.25); color: var(--sand); }
+.seg-btn.s-port     { background: var(--clay-dim); border-color: var(--clay-line); color: var(--clay); }
+
+/* ── TOTAL PREVIEW ── */
+.total-box {
+  background: var(--bg3); border: 1px solid var(--line2);
+  border-radius: 12px; padding: 12px 14px;
+}
+
+/* ── PRIMARY BUTTON ── */
+.btn-primary {
+  width: 100%; padding: 15px;
+  background: var(--clay); border: none;
+  border-radius: 14px; color: #fff;
+  font-family: 'Geist', sans-serif;
+  font-size: 14px; font-weight: 600; letter-spacing: 0.2px;
+  cursor: pointer; transition: all 0.2s;
+}
+.btn-primary:hover  { background: #D98A6E; transform: translateY(-1px); box-shadow: 0 8px 20px rgba(204,120,92,0.3); }
+.btn-primary:active { transform: translateY(0); box-shadow: none; }
+.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ── HISTORY ITEM ── */
+.hist-item {
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: 14px; padding: 13px 14px;
+  display: flex; align-items: center; gap: 12px;
+  transition: background 0.15s;
+}
+.hist-item:hover { background: var(--bg3); }
+.hist-icon {
+  width: 40px; height: 40px; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; flex-shrink: 0;
+}
+.hist-act {
+  width: 32px; height: 32px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: all 0.15s; flex-shrink: 0;
+  border: 1px solid var(--line2); background: var(--bg3);
+}
+.hist-act:hover { background: var(--bg4); }
+.hist-act svg { width: 13px; height: 13px; stroke: var(--t2); fill: none; stroke-width: 1.8; }
+
+/* ── FILTER PILLS ── */
+.fpill {
+  padding: 5px 13px; border-radius: 99px;
+  font-size: 11px; font-weight: 600;
+  white-space: nowrap; cursor: pointer;
+  border: 1px solid var(--line2);
+  background: var(--bg3); color: var(--t2);
+  transition: all 0.15s;
+}
+.fpill.active { background: var(--clay); border-color: var(--clay); color: #fff; }
+.fpill:not(.active):hover { background: var(--bg4); color: var(--t1); }
+
+/* ── MODAL ── */
+.modal-wrap {
+  position: fixed; inset: 0; z-index: 80;
+  background: rgba(0,0,0,0.65);
+  backdrop-filter: blur(8px);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: 0 12px 12px;
+}
+.modal-box {
+  background: var(--bg2); border: 1px solid var(--line2);
+  border-radius: 24px; padding: 24px;
+  width: 100%; max-width: 460px;
+  max-height: 85dvh; overflow-y: auto;
+}
+.modal-box::-webkit-scrollbar { display: none; }
+.modal-btn {
+  flex: 1; padding: 13px; border-radius: 12px;
+  font-family: 'Geist', sans-serif;
+  font-size: 14px; font-weight: 600;
+  cursor: pointer; border: none; transition: all 0.15s;
+}
+
+/* ── CHART CANVAS ── */
+.chart-shell {
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: var(--r); overflow: hidden;
+}
+
+/* ── DROPDOWN ── */
+.name-dd {
+  position: absolute; z-index: 50;
+  width: 100%; top: calc(100% + 4px);
+  background: var(--bg4); border: 1px solid var(--line2);
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+}
+.name-opt {
+  padding: 10px 14px; font-size: 13px; cursor: pointer;
+  transition: background 0.12s; color: var(--t1);
+}
+.name-opt:hover { background: var(--clay-dim); color: var(--clay); }
+
+/* ── ANIMATIONS ── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.anim-1 { animation: fadeSlideUp .35s ease both; }
+.anim-2 { animation: fadeSlideUp .35s .06s ease both; }
+.anim-3 { animation: fadeSlideUp .35s .12s ease both; }
+.anim-4 { animation: fadeSlideUp .35s .18s ease both; }
+.anim-5 { animation: fadeSlideUp .35s .24s ease both; }
+
+.live-dot {
+  display: inline-block; width: 6px; height: 6px;
+  background: var(--sage); border-radius: 50%;
+  animation: pulseGlow 2s infinite;
+}
+
+/* ── SECTION HEADER ── */
+.sec-hd {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+.sec-title { font-size: 11px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; color: var(--t3); }
+.sec-link  { font-size: 11px; font-weight: 600; color: var(--clay); cursor: pointer; }
+
+/* ── SCROLLBAR for filter ── */
+.filter-scroll { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.filter-scroll::-webkit-scrollbar { display: none; }
+
+/* ── PERFORMANCE CHART ── */
+#perf-bars {
+  display: flex; align-items: flex-end; gap: 4px;
+  height: 72px;
+}
+.bar-col {
+  flex: 1; border-radius: 4px 4px 0 0;
+  cursor: pointer; transition: opacity 0.15s;
+  position: relative; min-width: 8px;
+}
+.bar-col:hover { opacity: 0.8; }
+.bar-col.positive { background: linear-gradient(180deg, rgba(74,154,120,0.9) 0%, rgba(74,154,120,0.5) 100%); }
+.bar-col.negative { background: linear-gradient(180deg, rgba(194,94,110,0.9) 0%, rgba(194,94,110,0.5) 100%); }
+.bar-col.zero     { background: var(--bg4); min-height: 4px; }
+
+/* ── DONUT ── */
+.donut-wrap { position: relative; }
+.donut-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+
+/* ── ASSET SUMMARY ── */
+.asset-sum {
+  background: var(--bg2); border: 1px solid var(--line);
+  border-radius: 16px; overflow: hidden;
+}
+.asset-sum-hd {
+  padding: 13px 16px; border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.asset-sum-row {
+  padding: 11px 16px; border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 10px;
+}
+.asset-sum-row:last-child { border-bottom: none; }
+
+/* ── HIDDEN ── */
+.hidden { display: none !important; }
+
+/* ── SAFE AREA ── */
+.pb-safe { padding-bottom: env(safe-area-inset-bottom, 0); }
+</style>
+<script src="/_sdk/resizing_sdk.js"></script>
+</head>
+<body>
+
+<div class="app">
+<div class="scroll-area" id="main-scroll">
+<div style="max-width:480px;margin:0 auto;padding:0 16px 100px">
+
+<!-- ══════════════════════════════
+     OVERVIEW
+══════════════════════════════ -->
+<div id="view-overview" class="view active">
+
+  <!-- Header -->
+  <div style="padding:52px 0 20px;display:flex;align-items:flex-start;justify-content:space-between">
+    <div class="anim-1">
+      <p style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:4px">
+        <span class="live-dot" style="margin-right:5px"></span>Portfolio
+      </p>
+      <h1 class="serif" style="font-size:32px;font-weight:400;line-height:1;letter-spacing:-0.5px">
+        ภาพรวม<em style="color:var(--clay)">พอร์ต</em>
+      </h1>
+    </div>
+    <div style="width:40px;height:40px;background:var(--clay-dim);border:1px solid var(--clay-line);border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;margin-top:48px" onclick="switchView('add')">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--clay)" stroke-width="2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    </div>
+  </div>
+
+  <!-- Hero card -->
+  <div class="hero anim-2" style="margin-bottom:12px">
+    <p style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:8px">มูลค่าพอร์ตรวม</p>
+    <p id="ov-total" class="mono" style="font-size:36px;font-weight:500;letter-spacing:-1.5px;color:var(--t1);line-height:1;margin-bottom:10px">฿0.00</p>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <span id="ov-growth-tag" class="tag tag-clay">0.00%</span>
+      <span style="font-size:12px;color:var(--t3)">เทียบต้นทุน</span>
+    </div>
+    <!-- mini sparkline bars -->
+    <div id="hero-sparkline" style="display:flex;align-items:flex-end;gap:3px;height:36px;margin-bottom:14px;opacity:0.7"></div>
+    <!-- divider -->
+    <div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:14px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0">
+      <div style="padding-right:12px;border-right:1px solid var(--line)">
+        <p style="font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:3px">ต้นทุน</p>
+        <p id="ov-cost" class="mono" style="font-size:13px;color:var(--t1)">฿0</p>
+      </div>
+      <div style="padding:0 12px;border-right:1px solid var(--line)">
+        <p style="font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:3px">กำไร/ขาดทุน</p>
+        <p id="ov-pnl" class="mono" style="font-size:13px">฿0</p>
+      </div>
+      <div style="padding-left:12px">
+        <p style="font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:3px">เงินสด</p>
+        <p id="ov-cash" class="mono" style="font-size:13px;color:var(--sand)">฿0</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Allocation -->
+  <div class="card anim-3" style="padding:16px;margin-bottom:12px">
+    <div class="sec-hd">
+      <span class="sec-title">สัดส่วนสินทรัพย์</span>
+    </div>
+    <div class="alloc-track" style="margin-bottom:10px" id="alloc-track">
+      <div class="alloc-seg" style="flex:1;background:var(--bg4)"></div>
+    </div>
+    <div id="alloc-legend" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+  </div>
+
+  <!-- Performance tracker -->
+  <div class="card anim-4" style="padding:16px;margin-bottom:12px">
+    <div class="sec-hd">
+      <span class="sec-title">ติดตามผล</span>
+      <div class="period-tabs" style="width:auto">
+        <button class="period-tab active" data-period="W" onclick="setPeriod('W',this)">สัปดาห์</button>
+        <button class="period-tab" data-period="M" onclick="setPeriod('M',this)">เดือน</button>
+        <button class="period-tab" data-period="Q" onclick="setPeriod('Q',this)">ไตรมาส</button>
+      </div>
+    </div>
+    <!-- bar chart -->
+    <div id="perf-bars" style="margin-bottom:8px"></div>
+    <!-- x-axis labels -->
+    <div id="perf-labels" style="display:flex;gap:4px;margin-bottom:14px"><!-- js fills --></div>
+    <!-- detail rows -->
+    <div id="perf-rows"><!-- js fills --></div>
+  </div>
+
+  <!-- Quick stats grid -->
+  <div class="anim-5" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div class="card" style="padding:14px;cursor:pointer" onclick="switchView('portfolio')">
+      <p style="font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:6px">พอร์ตทั้งหมด</p>
+      <p style="font-size:22px;color:var(--clay)">→</p>
+      <p style="font-size:11px;color:var(--t2);margin-top:4px">ดูรายละเอียด</p>
+    </div>
+    <div class="card" style="padding:14px;cursor:pointer" onclick="switchView('add')">
+      <p style="font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:6px">เพิ่มธุรกรรม</p>
+      <p style="font-size:22px;color:var(--clay)">+</p>
+      <p style="font-size:11px;color:var(--t2);margin-top:4px">บันทึกรายการ</p>
+    </div>
+  </div>
+</div><!-- /overview -->
+
+
+<!-- ══════════════════════════════
+     PORTFOLIO
+══════════════════════════════ -->
+<div id="view-portfolio" class="view">
+  <div style="padding:52px 0 20px">
+    <p style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:4px">ภาพรวม</p>
+    <h1 class="serif" style="font-size:32px;font-weight:400;letter-spacing:-0.5px">การ<em style="color:var(--clay)">ลงทุน</em></h1>
+  </div>
+
+  <!-- Donut -->
+  <div class="card" style="padding:20px;margin-bottom:12px">
+    <div class="sec-title" style="margin-bottom:14px">สัดส่วนพอร์ต</div>
+    <div style="display:flex;align-items:center;gap:20px">
+      <div style="position:relative;flex-shrink:0">
+        <canvas id="donut-all" width="140" height="140"></canvas>
+        <div class="donut-center">
+          <p id="donut-center-val" class="mono" style="font-size:14px;font-weight:500;color:var(--t1)">฿0</p>
+          <p style="font-size:9px;color:var(--t3);margin-top:1px">รวม</p>
+        </div>
+      </div>
+      <div id="donut-legend" style="flex:1;display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+  </div>
+
+  <!-- Sub donuts -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+    <div class="card" style="padding:14px">
+      <p style="font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:10px">US Stock</p>
+      <canvas id="donut-stock" width="100" height="100" class="mx-auto block"></canvas>
+    </div>
+    <div class="card" style="padding:14px">
+      <p style="font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:10px">Mutual Fund</p>
+      <canvas id="donut-fund" width="100" height="100" class="mx-auto block"></canvas>
+    </div>
+  </div>
+  <div class="card" style="padding:14px;margin-bottom:12px">
+    <p style="font-size:9px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:10px">Cash &amp; Gold</p>
+    <canvas id="donut-cashgold" width="100" height="100" class="mx-auto block"></canvas>
+  </div>
+
+  <!-- Growth chart -->
+  <div class="card" style="padding:16px;margin-bottom:12px">
+    <div class="sec-title" style="margin-bottom:12px">การเติบโตของพอร์ต</div>
+    <canvas id="line-chart" width="440" height="160" style="width:100%"></canvas>
+  </div>
+
+  <!-- Asset summary -->
+  <div id="portfolio-summary" style="display:flex;flex-direction:column;gap:8px;padding-bottom:20px"></div>
+</div><!-- /portfolio -->
+
+
+<!-- ══════════════════════════════
+     TRACKING — Manual Snapshot
+══════════════════════════════ -->
+<div id="view-track" class="view">
+  <div style="padding:52px 0 16px;display:flex;align-items:flex-end;justify-content:space-between">
+    <div>
+      <p style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:4px">ติดตามผล</p>
+      <h1 class="serif" style="font-size:32px;font-weight:400;letter-spacing:-0.5px">สรุป<em style="color:var(--clay)">พอร์ต</em></h1>
+    </div>
+    <!-- Add snapshot button -->
+    <button onclick="openSnapModal()" style="display:flex;align-items:center;gap:7px;padding:9px 14px;background:var(--clay-dim);border:1px solid var(--clay-line);border-radius:12px;color:var(--clay);font-size:12px;font-weight:600;cursor:pointer;font-family:Geist,sans-serif;flex-shrink:0">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      บันทึก
+    </button>
+  </div>
+
+  <!-- View toggle -->
+  <div class="period-tabs" style="width:100%;margin-bottom:14px">
+    <button class="period-tab active" id="track-tab-W" onclick="setTrackPeriod('W',this)">สัปดาห์</button>
+    <button class="period-tab" id="track-tab-M" onclick="setTrackPeriod('M',this)">เดือน</button>
+    <button class="period-tab" id="track-tab-Q" onclick="setTrackPeriod('Q',this)">ไตรมาส</button>
+  </div>
+
+  <!-- Latest snapshot hero -->
+  <div class="hero" id="track-hero" style="margin-bottom:12px">
+    <p style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:5px">ล่าสุด</p>
+    <p id="track-latest-date" class="serif" style="font-size:18px;color:var(--clay);margin-bottom:12px">–</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid rgba(255,255,255,0.06);padding-top:13px">
+      <div style="padding-right:14px;border-right:1px solid var(--line)">
+        <p style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:4px">มูลค่าสินทรัพย์</p>
+        <p id="track-latest-usd" class="mono" style="font-size:13px;color:var(--t2);margin-bottom:2px">$0.00</p>
+        <p id="track-latest-thb" class="mono" style="font-size:17px;font-weight:500;color:var(--t1)">฿0</p>
+      </div>
+      <div style="padding-left:14px">
+        <p style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:4px">กำไรที่ถืออยู่</p>
+        <p id="track-latest-pnl-usd" class="mono" style="font-size:13px;margin-bottom:2px">+$0.00</p>
+        <div style="display:flex;align-items:center;gap:6px">
+          <p id="track-latest-pnl-pct" class="mono" style="font-size:17px;font-weight:500">+0.00%</p>
+        </div>
+      </div>
+    </div>
+    <!-- week-over-week change vs previous entry -->
+    <div id="track-vs-prev" style="margin-top:12px;padding:9px 12px;background:rgba(0,0,0,0.2);border-radius:10px;display:none">
+      <p style="font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--t3);margin-bottom:4px">เทียบช่วงก่อนหน้า</p>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span id="track-vs-val" class="mono" style="font-size:14px;font-weight:500">–</span>
+        <span id="track-vs-tag" class="tag tag-clay">–</span>
+        <span id="track-vs-label" style="font-size:11px;color:var(--t3)"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bar chart: profit % per period -->
+  <div class="card" style="padding:16px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <span class="sec-title">กำไร % แต่ละช่วง</span>
+      <span id="track-bar-mode" style="font-size:10px;color:var(--t3)"></span>
+    </div>
+    <!-- canvas chart -->
+    <canvas id="track-canvas" height="90" style="width:100%;display:block;margin-bottom:6px"></canvas>
+    <div id="track-bar-labels" style="display:flex;gap:4px;font-size:8px;color:var(--t3)"></div>
+  </div>
+
+  <!-- Aggregated summary (month / quarter when in those modes) -->
+  <div id="track-agg-card" class="card" style="padding:16px;margin-bottom:12px;display:none">
+    <div class="sec-title" style="margin-bottom:12px" id="track-agg-title">สรุปรายเดือน</div>
+    <div id="track-agg-rows" style="display:flex;flex-direction:column"></div>
+  </div>
+
+  <!-- Weekly snapshot list -->
+  <div class="card" style="overflow:hidden;margin-bottom:12px">
+    <div style="padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between">
+      <span class="sec-title" id="track-list-title">บันทึกรายสัปดาห์</span>
+      <span id="track-list-count" style="font-size:11px;color:var(--t3)">0 รายการ</span>
+    </div>
+    <div id="track-snap-rows" style="display:flex;flex-direction:column"></div>
+    <div id="track-snap-empty" style="padding:32px 20px;text-align:center;color:var(--t3);font-size:12px">
+      ยังไม่มีข้อมูล — กด <strong style="color:var(--clay)">บันทึก</strong> เพื่อเพิ่ม snapshot แรก
+    </div>
+  </div>
+
+</div><!-- /track -->
+
+
+<!-- ══════════════════════════════
+     ADD
+══════════════════════════════ -->
+<div id="view-add" class="view">
+  <div style="padding:52px 0 20px">
+    <p style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:4px">บันทึก</p>
+    <h1 class="serif" style="font-size:32px;font-weight:400;letter-spacing:-0.5px">เพิ่ม<em style="color:var(--clay)">ธุรกรรม</em></h1>
+  </div>
+
+  <form id="tx-form" style="display:flex;flex-direction:column;gap:14px">
+
+    <!-- Type -->
+    <div>
+      <div class="f-label">ประเภทธุรกรรม</div>
+      <div class="seg-grid" style="grid-template-columns:repeat(4,1fr)">
+        <button type="button" class="seg-btn tx-type-btn" data-type="buy">ซื้อ</button>
+        <button type="button" class="seg-btn tx-type-btn" data-type="sell">ขาย</button>
+        <button type="button" class="seg-btn tx-type-btn" data-type="deposit">ฝาก</button>
+        <button type="button" class="seg-btn tx-type-btn" data-type="withdraw">ถอน</button>
+      </div>
+    </div>
+
+    <!-- Date -->
+    <div>
+      <div class="f-label">วันที่</div>
+      <input type="date" id="tx-date" class="f-input">
+    </div>
+
+    <!-- Portfolio -->
+    <div id="port-wrap">
+      <div class="f-label">พอร์ตการลงทุน</div>
+      <div class="seg-grid" style="grid-template-columns:repeat(2,1fr)">
+        <button type="button" class="seg-btn port-btn" data-port="US_STOCK">หุ้นสหรัฐ</button>
+        <button type="button" class="seg-btn port-btn" data-port="MUTUAL_FUND">กองทุนรวม</button>
+        <button type="button" class="seg-btn port-btn" data-port="GOLD">ทองคำ</button>
+        <button type="button" class="seg-btn port-btn" data-port="CASH">เงินสด</button>
+      </div>
+    </div>
+
+    <!-- Stock fields -->
+    <div id="fields-stock" class="hidden" style="display:flex;flex-direction:column;gap:12px">
+      <div><div class="f-label">ประเภท</div>
+        <select id="stock-category" class="f-input"><option value="STOCK">STOCK</option><option value="ETF">ETF</option></select></div>
+      <div style="position:relative"><div class="f-label">ชื่อหุ้น</div>
+        <input type="text" id="stock-name" class="f-input" placeholder="เช่น AAPL, TSLA">
+        <div id="stock-name-dropdown" class="name-dd hidden"></div></div>
+      <div><div class="f-label">ราคาต่อหน่วย (USD)</div><input type="number" step="0.0000001" id="stock-price" class="f-input"></div>
+      <div><div class="f-label">จำนวนหน่วย</div><input type="number" step="0.00000001" id="stock-qty" class="f-input"></div>
+      <div><div class="f-label">อัตราแลกเปลี่ยน (USD/THB)</div><input type="number" step="0.01" id="stock-rate" class="f-input" placeholder="34.50"></div>
+      <div><div class="f-label">ค่าคอมมิชชั่น (THB)</div><input type="number" step="0.001" id="stock-fee" class="f-input" value="0"></div>
+      <div><div class="f-label">VAT 7% (THB)</div><input type="number" step="0.0001" id="stock-vat" class="f-input" value="0"></div>
+      <div><div class="f-label">ซื้อผ่าน</div><input type="text" id="stock-broker" class="f-input"></div>
+      <div class="total-box"><p style="font-size:10px;color:var(--t3);margin-bottom:3px">มูลค่ารวม</p><p id="stock-total" class="mono" style="font-size:14px;font-weight:500">$0.00 / ฿0.00</p></div>
+    </div>
+
+    <!-- Fund fields -->
+    <div id="fields-fund" class="hidden" style="display:flex;flex-direction:column;gap:12px">
+      <div style="position:relative"><div class="f-label">ชื่อกองทุน</div>
+        <input type="text" id="fund-name" class="f-input" placeholder="เช่น KFAFIX">
+        <div id="fund-name-dropdown" class="name-dd hidden"></div></div>
+      <div><div class="f-label">ราคาต่อหน่วย (THB)</div><input type="number" step="0.0000001" id="fund-price" class="f-input"></div>
+      <div><div class="f-label">จำนวนหน่วย (NAV)</div><input type="number" step="0.00000001" id="fund-qty" class="f-input"></div>
+      <div><div class="f-label">ค่าคอมมิชชั่น (THB)</div><input type="number" step="0.001" id="fund-fee" class="f-input" value="0"></div>
+      <div><div class="f-label">VAT 7% (THB)</div><input type="number" step="0.0001" id="fund-vat" class="f-input" value="0"></div>
+      <div><div class="f-label">ซื้อผ่าน</div><input type="text" id="fund-broker" class="f-input"></div>
+      <div class="total-box"><p style="font-size:10px;color:var(--t3);margin-bottom:3px">มูลค่ารวม</p><p id="fund-total" class="mono" style="font-size:14px;font-weight:500">฿0.00</p></div>
+    </div>
+
+    <!-- Gold fields -->
+    <div id="fields-gold" class="hidden" style="display:flex;flex-direction:column;gap:12px">
+      <div style="position:relative"><div class="f-label">ชื่อ</div>
+        <input type="text" id="gold-name" class="f-input" placeholder="เช่น Gold Bar">
+        <div id="gold-name-dropdown" class="name-dd hidden"></div></div>
+      <div><div class="f-label">หน่วย</div>
+        <select id="gold-unit" class="f-input"><option value="oz">oz (USD/oz)</option><option value="g">g (THB/g)</option></select></div>
+      <div><div class="f-label">ราคาต่อหน่วย</div><input type="number" step="0.0000001" id="gold-price" class="f-input"></div>
+      <div><div class="f-label">น้ำหนัก</div><input type="number" step="0.00000001" id="gold-qty" class="f-input"></div>
+      <div><div class="f-label">ซื้อผ่าน</div><input type="text" id="gold-broker" class="f-input"></div>
+      <div id="gold-rate-wrap"><div class="f-label">อัตราแลกเปลี่ยน (USD/THB)</div><input type="number" step="0.01" id="gold-rate" class="f-input" placeholder="34.50"></div>
+      <div><div class="f-label">ค่าคอมมิชชั่น (THB)</div><input type="number" step="0.001" id="gold-fee" class="f-input" value="0"></div>
+      <div><div class="f-label">VAT 7% (THB)</div><input type="number" step="0.0001" id="gold-vat" class="f-input" value="0"></div>
+      <div class="total-box"><p style="font-size:10px;color:var(--t3);margin-bottom:3px">มูลค่ารวม</p><p id="gold-total" class="mono" style="font-size:14px;font-weight:500">$0.00 / ฿0.00</p></div>
+    </div>
+
+    <!-- Cash fields -->
+    <div id="fields-cash" class="hidden">
+      <div class="f-label">จำนวนเงิน (THB)</div>
+      <input type="number" step="0.01" id="cash-amount" class="f-input">
+    </div>
+
+    <button type="submit" id="submit-btn" class="btn-primary">บันทึกธุรกรรม</button>
+    <div id="form-msg" class="hidden" style="text-align:center;font-size:13px;padding:8px;border-radius:10px"></div>
+  </form>
+</div><!-- /add -->
+
+
+<!-- ══════════════════════════════
+     HISTORY
+══════════════════════════════ -->
+<div id="view-history" class="view view-history">
+  <div style="padding:52px 0 14px;flex-shrink:0">
+    <p style="font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--t3);margin-bottom:4px">บันทึก</p>
+    <h1 class="serif" style="font-size:32px;font-weight:400;letter-spacing:-0.5px">ประวัติ<em style="color:var(--clay)">ธุรกรรม</em></h1>
+  </div>
+  <!-- Filters -->
+  <div class="filter-scroll" style="flex-shrink:0;margin-bottom:12px">
+    <button class="fpill hist-filter-btn active" data-filter="ALL">ทั้งหมด</button>
+    <button class="fpill hist-filter-btn" data-filter="US_STOCK">หุ้นสหรัฐ</button>
+    <button class="fpill hist-filter-btn" data-filter="MUTUAL_FUND">กองทุน</button>
+    <button class="fpill hist-filter-btn" data-filter="GOLD">ทองคำ</button>
+    <button class="fpill hist-filter-btn" data-filter="CASH">เงินสด</button>
+  </div>
+  <!-- List -->
+  <div style="flex:1;overflow-y:auto;scrollbar-width:none" id="history-outer">
+    <div id="history-list" style="display:flex;flex-direction:column;gap:6px;padding-bottom:16px"></div>
+    <div id="history-empty" style="text-align:center;padding:60px 20px;color:var(--t3)">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" class="mx-auto" style="margin-bottom:10px;opacity:0.4"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <p style="font-size:13px">ยังไม่มีรายการ</p>
+    </div>
+  </div>
+</div><!-- /history -->
+
+</div><!-- /container -->
+</div><!-- /scroll-area -->
+
+<!-- NAV -->
+<nav class="nav pb-safe">
+  <div class="nav-inner">
+    <button class="nav-btn active" data-view="overview" onclick="switchView('overview')">
+      <svg viewBox="0 0 24 24"><rect x="2" y="13" width="7" height="9" rx="1"/><rect x="9" y="9" width="6" height="13" rx="1"/><rect x="16" y="5" width="7" height="17" rx="1"/></svg>
+      ภาพรวม
+    </button>
+    <button class="nav-btn" data-view="portfolio" onclick="switchView('portfolio')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l5 3"/></svg>
+      พอร์ต
+    </button>
+    <button class="nav-btn" data-view="track" onclick="switchView('track')">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      ติดตาม
+    </button>
+    <button class="nav-btn" data-view="add" onclick="switchView('add')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+      เพิ่ม
+    </button>
+    <button class="nav-btn" data-view="history" onclick="switchView('history')">
+      <svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+      ประวัติ
+    </button>
+  </div>
+</nav>
+</div><!-- /app -->
+
+<!-- EDIT MODAL -->
+<div id="edit-modal" class="modal-wrap hidden">
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="font-size:18px;font-weight:600">แก้ไขธุรกรรม</h2>
+      <button onclick="document.getElementById('edit-modal').classList.add('hidden')" style="width:32px;height:32px;background:var(--bg3);border:1px solid var(--line2);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div id="edit-fields" style="display:flex;flex-direction:column;gap:12px"></div>
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button id="edit-save" class="modal-btn" style="background:var(--clay);color:#fff">บันทึก</button>
+      <button id="edit-cancel" class="modal-btn" style="background:var(--bg3);color:var(--t2);border:1px solid var(--line2)">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE MODAL -->
+<div id="delete-modal" class="modal-wrap hidden">
+  <div class="modal-box" style="max-width:340px;text-align:center">
+    <div style="width:50px;height:50px;background:var(--rose-dim);border:1px solid var(--rose-line);border-radius:14px;display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--rose)" stroke-width="1.8" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+    </div>
+    <p style="font-size:16px;font-weight:600;margin-bottom:6px">ลบรายการนี้?</p>
+    <p style="font-size:12px;color:var(--t3);margin-bottom:18px">การกระทำนี้ไม่สามารถย้อนกลับได้</p>
+    <div style="display:flex;gap:10px">
+      <button id="delete-confirm" class="modal-btn" style="background:var(--rose-dim);color:var(--rose);border:1px solid var(--rose-line)">ลบ</button>
+      <button id="delete-cancel" class="modal-btn" style="background:var(--bg3);color:var(--t2);border:1px solid var(--line2)">ยกเลิก</button>
+    </div>
+  </div>
+</div>
+
+<script src="/_sdk/editing_sdk.js"></script>
+<script>
+'use strict';
+lucide.createIcons();
+
+/* ═══════ CONSTANTS ═══════ */
+const USD_THB = 34.5;
+const PORT_COLORS = { US_STOCK:'#4F7FB5', MUTUAL_FUND:'#CC785C', GOLD:'#B8A47A', CASH:'#4A9A78' };
+const PORT_LABEL  = { US_STOCK:'หุ้นสหรัฐ', MUTUAL_FUND:'กองทุนรวม', GOLD:'ทองคำ', CASH:'เงินสด' };
+const TYPE_LABEL  = { buy:'ซื้อ', sell:'ขาย', deposit:'ฝาก', withdraw:'ถอน' };
+const TYPE_ICON   = { US_STOCK:'📈', MUTUAL_FUND:'🏦', GOLD:'🥇', CASH:'💵' };
+
+/* ═══════ STATE ═══════ */
+let allData = [];
+let activeView = 'overview';
+let currentFilter = 'ALL';
+let selectedType = '';
+let selectedPort = '';
+let editingRecord = null;
+let deletingRecord = null;
+let activePeriod = 'W';
+let activeTrackPeriod = 'W';
+
+/* ═══════ VIEW SWITCHING ═══════ */
+function switchView(v) {
+  document.querySelectorAll('.view').forEach(el => { el.classList.remove('active'); });
+  const el = document.getElementById('view-' + v);
+  if (el) el.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const nb = document.querySelector(`.nav-btn[data-view="${v}"]`);
+  if (nb) nb.classList.add('active');
+  activeView = v;
+  document.getElementById('main-scroll').scrollTop = 0;
+  if (v === 'portfolio') renderCharts();
+  if (v === 'history')   renderHistory();
+  if (v === 'track')     renderTrack();
+  if (v === 'overview')  renderOverview();
+}
+
+/* ═══════ PERIOD ═══════ */
+function setPeriod(p, btn) {
+  activePeriod = p;
+  document.querySelectorAll('.period-tab[data-period]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPerfBars();
+}
+
+function setTrackPeriod(p, btn) {
+  activeTrackPeriod = p;
+  btn.closest('.period-tabs').querySelectorAll('.period-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTrack();
+}
+
+/* ═══════ TYPE / PORT BUTTONS ═══════ */
+document.querySelectorAll('.tx-type-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tx-type-btn').forEach(b => b.className = 'seg-btn tx-type-btn');
+    btn.classList.add('s-' + btn.dataset.type);
+    selectedType = btn.dataset.type;
+    const isCash = selectedType === 'deposit' || selectedType === 'withdraw';
+    document.getElementById('port-wrap').classList.toggle('hidden', isCash);
+    if (isCash) { selectedPort = 'CASH'; showFields('CASH'); }
+  });
+});
+
+document.querySelectorAll('.port-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.port-btn').forEach(b => b.className = 'seg-btn port-btn');
+    btn.classList.add('s-port');
+    selectedPort = btn.dataset.port;
+    showFields(selectedPort);
+  });
+});
+
+function showFields(port) {
+  ['fields-stock','fields-fund','fields-gold','fields-cash'].forEach(id => document.getElementById(id).classList.add('hidden'));
+  const map = { US_STOCK:'fields-stock', MUTUAL_FUND:'fields-fund', GOLD:'fields-gold', CASH:'fields-cash' };
+  if (map[port]) document.getElementById(map[port]).classList.remove('hidden');
+}
+
+/* ═══════ CALC HELPERS ═══════ */
+['stock-price','stock-qty','stock-fee','stock-vat','stock-rate'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    const p=+(document.getElementById('stock-price').value)||0;
+    const q=+(document.getElementById('stock-qty').value)||0;
+    const f=+(document.getElementById('stock-fee').value)||0;
+    const vat=+(document.getElementById('stock-vat').value)||0;
+    const r=+(document.getElementById('stock-rate').value)||USD_THB;
+    const tot = p*q*r + f + vat;
+    document.getElementById('stock-total').textContent = `$${(tot/r).toFixed(2)} / ฿${tot.toFixed(2)}`;
+  });
+});
+['fund-price','fund-qty','fund-fee','fund-vat'].forEach(id => {
+  document.getElementById(id).addEventListener('input', () => {
+    const p=+(document.getElementById('fund-price').value)||0;
+    const q=+(document.getElementById('fund-qty').value)||0;
+    const f=+(document.getElementById('fund-fee').value)||0;
+    const vat=+(document.getElementById('fund-vat').value)||0;
+    document.getElementById('fund-total').textContent = `฿${(p*q+f+vat).toFixed(2)}`;
+  });
+});
+['gold-price','gold-qty','gold-fee','gold-vat','gold-unit','gold-rate'].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', calcGold);
+  el.addEventListener('change', calcGold);
+});
+function calcGold() {
+  const p=+(document.getElementById('gold-price').value)||0;
+  const q=+(document.getElementById('gold-qty').value)||0;
+  const f=+(document.getElementById('gold-fee').value)||0;
+  const vat=+(document.getElementById('gold-vat').value)||0;
+  const unit = document.getElementById('gold-unit').value;
+  const r=+(document.getElementById('gold-rate').value)||USD_THB;
+  const tot = unit==='oz' ? p*q*r+f+vat : p*q+f+vat;
+  document.getElementById('gold-total').textContent = unit==='oz' ? `$${(tot/r).toFixed(2)} / ฿${tot.toFixed(2)}` : `฿${tot.toFixed(2)}`;
+}
+
+document.getElementById('tx-date').value = new Date().toISOString().split('T')[0];
+
+/* ═══════ DROPDOWNS ═══════ */
+function setupDD(inputId, ddId, portKey) {
+  const input = document.getElementById(inputId);
+  const dd    = document.getElementById(ddId);
+  function show() {
+    const seen = {};
+    const names = allData.filter(d => d.portfolio===portKey && d.asset_name && !seen[d.asset_name] && (seen[d.asset_name]=true))
+      .map(d=>d.asset_name).filter(n => n.toLowerCase().includes(input.value.toLowerCase()));
+    if (!names.length) { dd.classList.add('hidden'); return; }
+    dd.innerHTML = names.map(n=>`<div class="name-opt">${n}</div>`).join('');
+    dd.classList.remove('hidden');
+    dd.querySelectorAll('.name-opt').forEach(el => el.addEventListener('click', () => { input.value=el.textContent; dd.classList.add('hidden'); }));
+  }
+  input.addEventListener('focus', show);
+  input.addEventListener('input', show);
+  document.addEventListener('click', e => { if (!input.contains(e.target)&&!dd.contains(e.target)) dd.classList.add('hidden'); });
+}
+setupDD('stock-name','stock-name-dropdown','US_STOCK');
+setupDD('fund-name','fund-name-dropdown','MUTUAL_FUND');
+setupDD('gold-name','gold-name-dropdown','GOLD');
+
+/* ═══════ SUBMIT ═══════ */
+document.getElementById('tx-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  if (!selectedType) { showMsg('กรุณาเลือกประเภทธุรกรรม','err'); return; }
+  if (!selectedPort) { showMsg('กรุณาเลือกพอร์ต','err'); return; }
+  if (allData.length >= 999) { showMsg('ถึงขีดจำกัด 999 รายการ','err'); return; }
+
+  const rec = { type:selectedType, transaction_type:selectedType, date:document.getElementById('tx-date').value,
+    portfolio:selectedPort, asset_category:'', asset_name:'', price_per_unit:0, quantity:0, fee:0, vat:0,
+    total_usd:0, total_thb:0, broker:'', unit_type:'USD', weight_unit:'', exchange_rate:0 };
+
+  if (selectedPort==='US_STOCK') {
+    rec.asset_category = document.getElementById('stock-category').value;
+    rec.asset_name = document.getElementById('stock-name').value;
+    rec.price_per_unit=+(document.getElementById('stock-price').value)||0;
+    rec.quantity=+(document.getElementById('stock-qty').value)||0;
+    rec.fee=+(document.getElementById('stock-fee').value)||0;
+    rec.vat=+(document.getElementById('stock-vat').value)||0;
+    rec.broker=document.getElementById('stock-broker').value;
+    const r=+(document.getElementById('stock-rate').value)||USD_THB;
+    rec.exchange_rate=r;
+    rec.total_thb=rec.price_per_unit*rec.quantity*r+rec.fee+rec.vat;
+    rec.total_usd=rec.total_thb/r;
+  } else if (selectedPort==='MUTUAL_FUND') {
+    rec.asset_name=document.getElementById('fund-name').value;
+    rec.price_per_unit=+(document.getElementById('fund-price').value)||0;
+    rec.quantity=+(document.getElementById('fund-qty').value)||0;
+    rec.fee=+(document.getElementById('fund-fee').value)||0;
+    rec.vat=+(document.getElementById('fund-vat').value)||0;
+    rec.broker=document.getElementById('fund-broker').value;
+    rec.total_thb=rec.price_per_unit*rec.quantity+rec.fee+rec.vat;
+    rec.total_usd=rec.total_thb/USD_THB;
+    rec.unit_type='THB'; rec.exchange_rate=USD_THB;
+  } else if (selectedPort==='GOLD') {
+    rec.asset_name=document.getElementById('gold-name').value;
+    rec.weight_unit=document.getElementById('gold-unit').value;
+    rec.price_per_unit=+(document.getElementById('gold-price').value)||0;
+    rec.quantity=+(document.getElementById('gold-qty').value)||0;
+    rec.fee=+(document.getElementById('gold-fee').value)||0;
+    rec.vat=+(document.getElementById('gold-vat').value)||0;
+    rec.broker=document.getElementById('gold-broker').value;
+    if (rec.weight_unit==='oz') {
+      const r=+(document.getElementById('gold-rate').value)||USD_THB;
+      rec.exchange_rate=r;
+      rec.total_thb=rec.price_per_unit*rec.quantity*r+rec.fee+rec.vat;
+      rec.total_usd=rec.total_thb/r;
+    } else {
+      rec.total_thb=rec.price_per_unit*rec.quantity+rec.fee+rec.vat;
+      rec.total_usd=rec.total_thb/USD_THB;
+      rec.unit_type='THB';
+    }
+  } else if (selectedPort==='CASH') {
+    rec.total_thb=+(document.getElementById('cash-amount').value)||0;
+    rec.total_usd=rec.total_thb/USD_THB;
+  }
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled=true; btn.textContent='กำลังบันทึก…';
+  const result = await window.dataSdk.create(rec);
+  btn.disabled=false; btn.textContent='บันทึกธุรกรรม';
+  if (result.isOk) {
+    showMsg('บันทึกสำเร็จ ✓','ok');
+    document.getElementById('tx-form').reset();
+    document.getElementById('tx-date').value=new Date().toISOString().split('T')[0];
+    selectedType=''; selectedPort='';
+    document.querySelectorAll('.tx-type-btn,.port-btn').forEach(b => b.className = b.classList.contains('tx-type-btn') ? 'seg-btn tx-type-btn' : 'seg-btn port-btn');
+    ['fields-stock','fields-fund','fields-gold','fields-cash'].forEach(id=>document.getElementById(id).classList.add('hidden'));
+    document.getElementById('port-wrap').classList.remove('hidden');
+  } else { showMsg('เกิดข้อผิดพลาด','err'); }
+});
+
+function showMsg(msg, type) {
+  const el = document.getElementById('form-msg');
+  el.textContent = msg;
+  el.style.background = type==='ok' ? 'var(--sage-dim)' : 'var(--rose-dim)';
+  el.style.color       = type==='ok' ? 'var(--sage)'    : 'var(--rose)';
+  el.style.border      = `1px solid ${type==='ok' ? 'var(--sage-line)' : 'var(--rose-line)'}`;
+  el.classList.remove('hidden');
+  setTimeout(()=>el.classList.add('hidden'), 3000);
+}
+
+/* ═══════ FILTER ═══════ */
+document.querySelectorAll('.hist-filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.hist-filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    renderHistory();
+  });
+});
+
+/* ═══════ HISTORY RENDER ═══════ */
+function renderHistory() {
+  if (activeView !== 'history') return;
+  const list  = document.getElementById('history-list');
+  const empty = document.getElementById('history-empty');
+  const filtered = currentFilter==='ALL' ? allData : allData.filter(d=>d.portfolio===currentFilter);
+  if (!filtered.length) { list.innerHTML=''; empty.classList.remove('hidden'); return; }
+  empty.classList.add('hidden');
+  const sorted = filtered.slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const typeColor = { buy:'var(--sage)', sell:'var(--rose)', deposit:'var(--clay)', withdraw:'var(--sand)' };
+  const typeBg    = { buy:'var(--sage-dim)', sell:'var(--rose-dim)', deposit:'var(--clay-dim)', withdraw:'var(--sand-dim)' };
+  list.innerHTML = sorted.map(item => {
+    const totalStr=(item.total_thb||0).toLocaleString('th-TH',{minimumFractionDigits:2});
+    const tc = typeColor[item.type]||'var(--t2)';
+    const tb = typeBg[item.type]||'var(--bg3)';
+    return `<div class="hist-item">
+      <div class="hist-icon" style="background:${tb}">${TYPE_ICON[item.portfolio]||'📊'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+          <span style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${item.asset_name||PORT_LABEL[item.portfolio]||''}</span>
+          <span style="font-size:10px;font-weight:700;padding:1px 7px;border-radius:99px;background:${tb};color:${tc};flex-shrink:0">${TYPE_LABEL[item.type]||''}</span>
+        </div>
+        <div style="font-size:10px;color:var(--t3)">${item.date||''} · ${PORT_LABEL[item.portfolio]||''}</div>
+        <div class="mono" style="font-size:12px;color:var(--t1);margin-top:1px">฿${totalStr}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-shrink:0">
+        <div class="hist-act" data-id="${item.__backendId}" onclick="openEdit(this.dataset.id)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--t2)" stroke-width="1.8" stroke-linecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </div>
+        <div class="hist-act" data-id="${item.__backendId}" onclick="openDelete(this.dataset.id)" style="background:var(--rose-dim);border-color:var(--rose-line)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--rose)" stroke-width="1.8" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════ EDIT / DELETE ═══════ */
+function openEdit(id) {
+  editingRecord = allData.find(d=>d.__backendId===id);
+  if (!editingRecord) return;
+  const f = document.getElementById('edit-fields');
+  let html = `<div><div class="f-label">วันที่</div><input type="date" id="edit-date" value="${editingRecord.date||''}" class="f-input"></div>`;
+  if (editingRecord.portfolio!=='CASH') {
+    html+=`<div><div class="f-label">ชื่อ</div><input type="text" id="edit-name" value="${editingRecord.asset_name||''}" class="f-input"></div>`;
+    html+=`<div><div class="f-label">ราคาต่อหน่วย</div><input type="number" step="0.01" id="edit-price" value="${editingRecord.price_per_unit||0}" class="f-input"></div>`;
+    html+=`<div><div class="f-label">จำนวน</div><input type="number" step="0.00000001" id="edit-qty" value="${editingRecord.quantity||0}" class="f-input"></div>`;
+    html+=`<div><div class="f-label">ค่าคอมมิชชั่น (THB)</div><input type="number" step="0.01" id="edit-fee" value="${editingRecord.fee||0}" class="f-input"></div>`;
+    html+=`<div><div class="f-label">VAT (THB)</div><input type="number" step="0.01" id="edit-vat" value="${editingRecord.vat||0}" class="f-input"></div>`;
+  } else {
+    html+=`<div><div class="f-label">จำนวนเงิน (THB)</div><input type="number" step="0.01" id="edit-cash" value="${editingRecord.total_thb||0}" class="f-input"></div>`;
+  }
+  f.innerHTML = html;
+  document.getElementById('edit-modal').classList.remove('hidden');
+}
+document.getElementById('edit-cancel').addEventListener('click', ()=>document.getElementById('edit-modal').classList.add('hidden'));
+document.getElementById('edit-save').addEventListener('click', async () => {
+  if (!editingRecord) return;
+  editingRecord.date=document.getElementById('edit-date').value;
+  if (editingRecord.portfolio!=='CASH') {
+    editingRecord.asset_name=document.getElementById('edit-name').value;
+    editingRecord.price_per_unit=+(document.getElementById('edit-price').value)||0;
+    editingRecord.quantity=+(document.getElementById('edit-qty').value)||0;
+    editingRecord.fee=+(document.getElementById('edit-fee').value)||0;
+    editingRecord.vat=+(document.getElementById('edit-vat').value)||0;
+    if (editingRecord.portfolio==='GOLD'&&editingRecord.weight_unit==='g') {
+      editingRecord.total_thb=editingRecord.price_per_unit*editingRecord.quantity+editingRecord.fee+editingRecord.vat;
+      editingRecord.total_usd=editingRecord.total_thb/USD_THB;
+    } else {
+      const r=editingRecord.exchange_rate||USD_THB;
+      editingRecord.total_thb=editingRecord.price_per_unit*editingRecord.quantity*r+editingRecord.fee+editingRecord.vat;
+      editingRecord.total_usd=editingRecord.total_thb/r;
+    }
+  } else {
+    editingRecord.total_thb=+(document.getElementById('edit-cash').value)||0;
+    editingRecord.total_usd=editingRecord.total_thb/USD_THB;
+  }
+  const btn=document.getElementById('edit-save');
+  btn.disabled=true; btn.textContent='กำลังบันทึก…';
+  const res=await window.dataSdk.update(editingRecord);
+  btn.disabled=false; btn.textContent='บันทึก';
+  if (res.isOk) document.getElementById('edit-modal').classList.add('hidden');
+});
+
+function openDelete(id) {
+  deletingRecord=allData.find(d=>d.__backendId===id);
+  document.getElementById('delete-modal').classList.remove('hidden');
+}
+document.getElementById('delete-cancel').addEventListener('click',()=>document.getElementById('delete-modal').classList.add('hidden'));
+document.getElementById('delete-confirm').addEventListener('click', async () => {
+  if (!deletingRecord) return;
+  const btn=document.getElementById('delete-confirm');
+  btn.disabled=true; btn.textContent='กำลังลบ…';
+  const res=await window.dataSdk.delete(deletingRecord);
+  btn.disabled=false; btn.textContent='ลบ';
+  if (res.isOk) document.getElementById('delete-modal').classList.add('hidden');
+});
+
+/* ═══════ COMPUTE CUMULATIVE ═══════ */
+function computeCumulative() {
+  // Returns sorted array: { date, cumulative }
+  const sorted = allData.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  let running = 0;
+  return sorted.map(d => {
+    const val = (d.type==='sell'||d.type==='withdraw') ? -(d.total_thb||0) : (d.total_thb||0);
+    running += val;
+    return { date: d.date||'', val: running };
+  });
+}
+
+/* ═══════ PERIOD BUCKETS ═══════ */
+function getBucketKey(dateStr, period) {
+  if (!dateStr) return null;
+  if (period==='W') {
+    // ISO week
+    const d = new Date(dateStr);
+    const day = d.getDay()||7;
+    const t = new Date(d); t.setDate(d.getDate()-day+1);
+    return t.toISOString().substring(0,10);
+  }
+  if (period==='M') return dateStr.substring(0,7);
+  if (period==='Q') {
+    const m = parseInt(dateStr.substring(5,7));
+    const q = Math.ceil(m/3);
+    return `${dateStr.substring(0,4)}-Q${q}`;
+  }
+}
+
+function computePeriodMap(period) {
+  // bucket -> running total at end of bucket
+  const sorted = allData.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  const map = {};
+  let running = 0;
+  sorted.forEach(d => {
+    const val = (d.type==='sell'||d.type==='withdraw') ? -(d.total_thb||0) : (d.total_thb||0);
+    running += val;
+    const key = getBucketKey(d.date, period);
+    if (key) map[key] = running;
+  });
+  return map;
+}
+
+function computePeriodChanges(period) {
+  const map = computePeriodMap(period);
+  const keys = Object.keys(map).sort();
+  return keys.map((k, i) => {
+    const cur  = map[k];
+    const prev = i>0 ? map[keys[i-1]] : 0;
+    const diff = cur - prev;
+    const pct  = prev>0 ? (diff/prev*100) : (cur>0 ? 100 : 0);
+    return { key: k, cur, prev, diff, pct };
+  });
+}
+
+/* ═══════ PERF BARS (OVERVIEW) ═══════ */
+function renderPerfBars() {
+  const changes = computePeriodChanges(activePeriod).slice(-8);
+  const barsEl   = document.getElementById('perf-bars');
+  const labelsEl = document.getElementById('perf-labels');
+  const rowsEl   = document.getElementById('perf-rows');
+  if (!changes.length) {
+    barsEl.innerHTML   = `<div style="color:var(--t3);font-size:11px;align-self:center;padding:8px 0">ยังไม่มีข้อมูล</div>`;
+    labelsEl.innerHTML = '';
+    rowsEl.innerHTML   = '';
+    return;
+  }
+  const maxAbs = Math.max(...changes.map(c=>Math.abs(c.diff)), 1);
+  const barHeight = 64;
+  barsEl.innerHTML = changes.map(c => {
+    const h = Math.max(4, Math.round(Math.abs(c.diff)/maxAbs * barHeight));
+    const cls = c.diff>0 ? 'positive' : c.diff<0 ? 'negative' : 'zero';
+    const label = formatPeriodKey(c.key, activePeriod);
+    return `<div class="bar-col ${cls}" style="height:${h}px" title="${label}: ${c.diff>=0?'+':''}฿${Math.abs(c.diff).toLocaleString('th-TH',{maximumFractionDigits:0})} (${c.pct>=0?'+':''}${c.pct.toFixed(1)}%)"></div>`;
+  }).join('');
+  labelsEl.innerHTML = changes.map(c => {
+    const short = formatPeriodKeyShort(c.key, activePeriod);
+    return `<div style="flex:1;text-align:center;font-size:8px;color:var(--t3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${short}</div>`;
+  }).join('');
+  // last 3 as detail rows
+  const recent = changes.slice(-3).reverse();
+  rowsEl.innerHTML = recent.map(c => {
+    const up = c.diff >= 0;
+    const tag = `<span class="tag ${up?'tag-up':'tag-dn'}" style="font-size:10px;padding:2px 7px">${up?'+':''}${c.pct.toFixed(1)}%</span>`;
+    return `<div class="perf-row">
+      <div>
+        <div style="font-size:12px;font-weight:600;color:var(--t1)">${formatPeriodKey(c.key, activePeriod)}</div>
+        <div style="font-size:10px;color:var(--t3);margin-top:1px">฿${c.cur.toLocaleString('th-TH',{maximumFractionDigits:0})}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="mono" style="font-size:12px;color:${up?'var(--sage)':'var(--rose)'}">${up?'+':''}฿${Math.abs(c.diff).toLocaleString('th-TH',{maximumFractionDigits:0})}</span>
+        ${tag}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function formatPeriodKey(key, period) {
+  if (period==='W') { const d=new Date(key); return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear().toString().slice(-2)}`; }
+  if (period==='M') { const [y,m]=key.split('-'); const mn=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']; return `${mn[+m]} ${(+y+543).toString().slice(-2)}`; }
+  if (period==='Q') return key.replace('-','\ ').replace('Q','Q');
+  return key;
+}
+function formatPeriodKeyShort(key, period) {
+  if (period==='W') { const d=new Date(key); return `${d.getDate()}/${d.getMonth()+1}`; }
+  if (period==='M') { const m=+key.split('-')[1]; const mn=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.']; return mn[m]; }
+  if (period==='Q') return key.split('-')[1];
+  return key;
+}
+
+/* ═══════ OVERVIEW ═══════ */
+function renderOverview() {
+  let totalCost=0, cashBalance=0;
+  allData.forEach(d => {
+    if (d.portfolio==='CASH') cashBalance += d.type==='deposit'?(d.total_thb||0):d.type==='withdraw'?-(d.total_thb||0):0;
+    else totalCost += d.type==='buy'?(d.total_thb||0):d.type==='sell'?-(d.total_thb||0):0;
+  });
+  const totalValue = totalCost + cashBalance;
+  const pnl = totalValue - totalCost - cashBalance; // investment pnl vs cost
+  const growth = totalCost>0 ? ((totalValue-totalCost)/totalCost*100).toFixed(2) : 0;
+
+  document.getElementById('ov-total').textContent = '฿'+totalValue.toLocaleString('th-TH',{minimumFractionDigits:2});
+  document.getElementById('ov-cost').textContent  = '฿'+fmtK(totalCost);
+  document.getElementById('ov-cash').textContent  = '฿'+fmtK(cashBalance);
+  const pnlReal = totalValue - totalCost;
+  const pnlEl = document.getElementById('ov-pnl');
+  pnlEl.textContent = (pnlReal>=0?'+':'')+'฿'+fmtK(pnlReal);
+  pnlEl.style.color = pnlReal>=0 ? 'var(--sage)' : 'var(--rose)';
+
+  const gTag = document.getElementById('ov-growth-tag');
+  gTag.textContent = (growth>=0?'+':'')+growth+'%';
+  gTag.className = 'tag '+(growth>=0?'tag-up':'tag-dn');
+
+  // hero sparkline (last 8 periods by month)
+  const map = computePeriodMap('M');
+  const keys = Object.keys(map).sort().slice(-8);
+  const vals = keys.map(k=>map[k]);
+  const maxV = Math.max(...vals, 1);
+  const sparkEl = document.getElementById('hero-sparkline');
+  sparkEl.innerHTML = vals.map(v=>{
+    const h = Math.max(3, Math.round(v/maxV*28));
+    return `<div style="flex:1;height:${h}px;background:rgba(204,120,92,0.45);border-radius:3px 3px 0 0"></div>`;
+  }).join('');
+
+  // alloc
+  const portTotals = { US_STOCK:0, MUTUAL_FUND:0, GOLD:0, CASH:cashBalance };
+  allData.forEach(d=>{
+    if (d.portfolio!=='CASH') {
+      const v = d.type==='buy'?(d.total_thb||0):d.type==='sell'?-(d.total_thb||0):0;
+      portTotals[d.portfolio] = (portTotals[d.portfolio]||0)+v;
+    }
+  });
+  const total = Object.values(portTotals).reduce((a,b)=>a+Math.max(b,0),0);
+  const trackEl = document.getElementById('alloc-track');
+  const legEl   = document.getElementById('alloc-legend');
+  const keys2 = Object.keys(portTotals);
+  trackEl.innerHTML = total>0 ? keys2.map(k=>{
+    const pct = Math.max(portTotals[k]||0,0)/total;
+    return `<div class="alloc-seg" style="flex:${pct||0};background:${PORT_COLORS[k]};${pct<0.01?'min-width:0':''}"></div>`;
+  }).join('') : '<div class="alloc-seg" style="flex:1;background:var(--bg4)"></div>';
+  legEl.innerHTML = keys2.map(k=>{
+    const pct = total>0 ? Math.round(Math.max(portTotals[k]||0,0)/total*100) : 0;
+    return `<div style="display:flex;align-items:center;gap:5px">
+      <div style="width:7px;height:7px;border-radius:50%;background:${PORT_COLORS[k]};flex-shrink:0"></div>
+      <span style="font-size:10px;color:var(--t2)">${PORT_LABEL[k]}</span>
+      <span class="mono" style="font-size:10px;color:var(--t1)">${pct}%</span>
+    </div>`;
+  }).join('');
+
+  renderPerfBars();
+}
+
+function fmtK(v) {
+  const abs = Math.abs(v);
+  if (abs>=1000000) return (v/1000000).toFixed(1)+'M';
+  if (abs>=1000)    return (v/1000).toFixed(1)+'K';
+  return v.toFixed(0);
+}
+
+/* ═══════ TRACK VIEW ═══════ */
+function renderTrack() {
+  if (activeView!=='track') return;
+  const changes = computePeriodChanges(activeTrackPeriod);
+  const last = changes[changes.length-1];
+
+  // Summary
+  const periodMap = {'W':'สัปดาห์', 'M':'เดือน', 'Q':'ไตรมาส'};
+  const periodLabel = last ? formatPeriodKey(last.key, activeTrackPeriod) : '–';
+  document.getElementById('track-period-label').textContent = periodLabel;
+  document.getElementById('track-cur-val').textContent = last ? '฿'+last.cur.toLocaleString('th-TH',{minimumFractionDigits:0}) : '฿0';
+  const tChVal = document.getElementById('track-change-val');
+  const tChTag = document.getElementById('track-change-tag');
+  if (last) {
+    const up = last.diff>=0;
+    tChVal.textContent = (up?'+':'')+'฿'+Math.abs(last.diff).toLocaleString('th-TH',{maximumFractionDigits:0});
+    tChVal.style.color = up?'var(--sage)':'var(--rose)';
+    tChTag.textContent = (up?'+':'')+last.pct.toFixed(2)+'%';
+    tChTag.className   = 'tag '+(up?'tag-up':'tag-dn');
+  }
+
+  // Bars
+  const recent = changes.slice(-12);
+  const maxAbs = Math.max(...recent.map(c=>Math.abs(c.diff)),1);
+  const trackBars = document.getElementById('track-bars');
+  const trackLbls = document.getElementById('track-labels');
+  trackBars.innerHTML = recent.map(c=>{
+    const h = Math.max(4, Math.round(Math.abs(c.diff)/maxAbs*72));
+    const cls = c.diff>0?'positive':c.diff<0?'negative':'zero';
+    return `<div class="bar-col ${cls}" style="height:${h}px" title="${formatPeriodKey(c.key,activeTrackPeriod)}: ${c.diff>=0?'+':''}${c.pct.toFixed(1)}%"></div>`;
+  }).join('');
+  trackLbls.innerHTML = recent.map(c=>`<div style="flex:1;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${formatPeriodKeyShort(c.key,activeTrackPeriod)}</div>`).join('');
+
+  // Detail rows (all, newest first)
+  const rows = changes.slice().reverse();
+  const trackRows = document.getElementById('track-rows');
+  if (!rows.length) {
+    trackRows.innerHTML = `<div style="padding:20px;text-align:center;color:var(--t3);font-size:12px">ยังไม่มีข้อมูล</div>`;
+    return;
+  }
+  trackRows.innerHTML = rows.map((c,i)=>{
+    const up = c.diff>=0;
+    const isLatest = i===0;
+    return `<div style="padding:13px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;${isLatest?'background:rgba(204,120,92,0.04)':''}">
+      <div>
+        <div style="font-size:13px;font-weight:${isLatest?'600':'400'};color:${isLatest?'var(--t1)':'var(--t2)'}">${formatPeriodKey(c.key,activeTrackPeriod)}</div>
+        <div class="mono" style="font-size:11px;color:var(--t3);margin-top:1px">฿${c.cur.toLocaleString('th-TH',{maximumFractionDigits:0})}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+        <span class="mono" style="font-size:12px;font-weight:500;color:${up?'var(--sage)':'var(--rose)'}">${up?'+':''}฿${Math.abs(c.diff).toLocaleString('th-TH',{maximumFractionDigits:0})}</span>
+        <span class="tag ${up?'tag-up':'tag-dn'}" style="font-size:10px;padding:1px 7px">${up?'+':''}${c.pct.toFixed(2)}%</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════ CHARTS ═══════ */
+function renderCharts() {
+  const portTotals={ US_STOCK:0, MUTUAL_FUND:0, GOLD:0, CASH:0 };
+  const stockAssets={}, fundAssets={};
+  let cashTotal=0, goldTotal=0;
+  allData.forEach(d=>{
+    const v=(d.type==='sell'||d.type==='withdraw')?-(d.total_thb||0):(d.total_thb||0);
+    if (d.portfolio==='CASH')         { portTotals.CASH+=v; cashTotal+=v; }
+    else if (d.portfolio==='US_STOCK')    { portTotals.US_STOCK+=v; stockAssets[d.asset_name||'Other']=(stockAssets[d.asset_name||'Other']||0)+v; }
+    else if (d.portfolio==='MUTUAL_FUND') { portTotals.MUTUAL_FUND+=v; fundAssets[d.asset_name||'Other']=(fundAssets[d.asset_name||'Other']||0)+v; }
+    else if (d.portfolio==='GOLD')        { portTotals.GOLD+=v; goldTotal+=v; }
+  });
+  const portColors = [PORT_COLORS.US_STOCK, PORT_COLORS.MUTUAL_FUND, PORT_COLORS.GOLD, PORT_COLORS.CASH];
+  drawDonut('donut-all', portTotals, portColors);
+  const totalAll = Object.values(portTotals).reduce((a,b)=>a+Math.max(b,0),0);
+  document.getElementById('donut-center-val').textContent = '฿'+fmtK(totalAll);
+  // Legend
+  const legEl = document.getElementById('donut-legend');
+  const keys  = Object.keys(portTotals);
+  legEl.innerHTML = keys.map((k,i)=>{
+    const pct = totalAll>0 ? Math.round(Math.max(portTotals[k]||0,0)/totalAll*100) : 0;
+    return `<div style="display:flex;align-items:center;gap:7px">
+      <div style="width:9px;height:9px;border-radius:3px;background:${portColors[i]};flex-shrink:0"></div>
+      <span style="font-size:12px;flex:1;color:var(--t2)">${PORT_LABEL[k]}</span>
+      <span class="mono" style="font-size:11px;color:var(--t1)">${pct}%</span>
+    </div>`;
+  }).join('');
+  drawDonut('donut-stock', stockAssets, ['#6B9FD4','#4F7FB5','#365A7A','#8FBDE0','#2A4560']);
+  drawDonut('donut-fund',  fundAssets,  ['#D9946E','#CC785C','#A55940','#E6B898','#7A3E2A']);
+  drawDonut('donut-cashgold', { Cash:cashTotal, Gold:goldTotal }, [PORT_COLORS.CASH, PORT_COLORS.GOLD]);
+  drawLineChart();
+  renderPortfolioSummary(portTotals, stockAssets, fundAssets, goldTotal, cashTotal);
+}
+
+function drawDonut(id, dataObj, colors) {
+  const canvas=document.getElementById(id);
+  if (!canvas) return;
+  const ctx=canvas.getContext('2d');
+  const w=canvas.width, h=canvas.height;
+  ctx.clearRect(0,0,w,h);
+  const values=Object.values(dataObj).map(v=>Math.max(v,0));
+  const total=values.reduce((a,b)=>a+b,0);
+  if (!total) {
+    ctx.beginPath(); ctx.arc(w/2,h/2,w*.38,0,Math.PI*2); ctx.fillStyle='#1E242D'; ctx.fill();
+    ctx.beginPath(); ctx.arc(w/2,h/2,w*.23,0,Math.PI*2); ctx.fillStyle='#0D0F12'; ctx.fill();
+    return;
+  }
+  let start=-Math.PI/2;
+  values.forEach((v,i)=>{
+    const sl=v/total*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(w/2,h/2); ctx.arc(w/2,h/2,w*.38,start,start+sl); ctx.closePath();
+    ctx.fillStyle=colors[i%colors.length]; ctx.fill();
+    start+=sl;
+  });
+  ctx.beginPath(); ctx.arc(w/2,h/2,w*.23,0,Math.PI*2); ctx.fillStyle='#0D0F12'; ctx.fill();
+}
+
+function drawLineChart() {
+  const canvas=document.getElementById('line-chart');
+  if (!canvas) return;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const sorted=allData.slice().sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+  if (!sorted.length) return;
+  const monthly={};
+  let run=0;
+  sorted.forEach(d=>{
+    const m=(d.date||'').substring(0,7);
+    run+=(d.type==='sell'||d.type==='withdraw')?-(d.total_thb||0):(d.total_thb||0);
+    monthly[m]=run;
+  });
+  const keys=Object.keys(monthly), vals=Object.values(monthly);
+  const maxV=Math.max(...vals,100), minV=Math.min(...vals,0);
+  const pad=28, W=canvas.width-pad*2, H=canvas.height-pad*2;
+  const pts=keys.map((k,i)=>({ x:pad+i/(keys.length-1||1)*W, y:pad+H-((vals[i]-minV)/(maxV-minV||1))*H }));
+  // fill
+  const grad=ctx.createLinearGradient(0,pad,0,pad+H);
+  grad.addColorStop(0,'rgba(204,120,92,0.2)'); grad.addColorStop(1,'rgba(204,120,92,0)');
+  ctx.beginPath();
+  pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  ctx.lineTo(pts[pts.length-1].x,pad+H); ctx.lineTo(pts[0].x,pad+H); ctx.closePath();
+  ctx.fillStyle=grad; ctx.fill();
+  // line
+  ctx.beginPath();
+  pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  ctx.strokeStyle='#CC785C'; ctx.lineWidth=2; ctx.lineJoin='round'; ctx.stroke();
+  // dots
+  pts.forEach(p=>{ ctx.beginPath(); ctx.arc(p.x,p.y,3,0,Math.PI*2); ctx.fillStyle='#CC785C'; ctx.fill(); });
+  ctx.fillStyle='#555C6E'; ctx.font='9px Geist';
+  if (keys.length) { ctx.fillText(keys[0],pad,canvas.height-4); ctx.fillText(keys[keys.length-1],canvas.width-pad-36,canvas.height-4); }
+}
+
+function renderPortfolioSummary(portTotals, stockAssets, fundAssets, goldTotal, cashTotal) {
+  const el=document.getElementById('portfolio-summary');
+  const stockQtys={}, fundQtys={};
+  let goldQty=0;
+  allData.forEach(d=>{
+    if (d.portfolio==='US_STOCK'&&d.asset_name)      stockQtys[d.asset_name]=(stockQtys[d.asset_name]||0)+(d.type==='sell'?-(d.quantity||0):(d.quantity||0));
+    else if(d.portfolio==='MUTUAL_FUND'&&d.asset_name) fundQtys[d.asset_name]=(fundQtys[d.asset_name]||0)+(d.type==='sell'?-(d.quantity||0):(d.quantity||0));
+    else if(d.portfolio==='GOLD')                      goldQty+=(d.type==='sell'?-(d.quantity||0):(d.quantity||0));
+  });
+  function card(title, color, total, assets, qtys) {
+    const rows = assets ? Object.keys(assets).map(k=>`
+      <div class="asset-sum-row">
+        <div style="width:6px;height:6px;border-radius:50%;background:${color};flex-shrink:0"></div>
+        <div style="flex:1;font-size:12px;font-weight:500">${k}</div>
+        <div style="text-align:right">
+          <div class="mono" style="font-size:11px;color:var(--t1)">฿${(assets[k]||0).toLocaleString('th-TH',{minimumFractionDigits:2})}</div>
+          <div style="font-size:9px;color:var(--t3)">${(qtys[k]||0).toLocaleString('th-TH',{minimumFractionDigits:4})} u</div>
+        </div>
+      </div>`).join('') : '';
+    return `<div class="asset-sum">
+      <div class="asset-sum-hd">
+        <div style="display:flex;align-items:center;gap:7px">
+          <div style="width:8px;height:8px;border-radius:2px;background:${color}"></div>
+          <span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t2)">${title}</span>
+        </div>
+        <span class="mono" style="font-size:14px;font-weight:500">฿${total.toLocaleString('th-TH',{minimumFractionDigits:0})}</span>
+      </div>
+      ${rows}
+    </div>`;
+  }
+  el.innerHTML =
+    card('US Stock','#4F7FB5',portTotals.US_STOCK||0,stockAssets,stockQtys)+
+    card('Mutual Fund','#CC785C',portTotals.MUTUAL_FUND||0,fundAssets,fundQtys)+
+    `<div class="asset-sum"><div class="asset-sum-hd"><div style="display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:2px;background:#B8A47A"></div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t2)">Gold</span></div><span class="mono" style="font-size:14px;font-weight:500">฿${goldTotal.toLocaleString('th-TH',{minimumFractionDigits:0})}</span></div><div class="asset-sum-row"><div style="flex:1;font-size:11px;color:var(--t3)">ปริมาณ</div><div class="mono" style="font-size:11px">${goldQty.toLocaleString('th-TH',{minimumFractionDigits:4})} units</div></div></div>` +
+    `<div class="asset-sum"><div class="asset-sum-hd"><div style="display:flex;align-items:center;gap:7px"><div style="width:8px;height:8px;border-radius:2px;background:#4A9A78"></div><span style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--t2)">Cash</span></div><span class="mono" style="font-size:14px;font-weight:500;color:var(--sage)">฿${cashTotal.toLocaleString('th-TH',{minimumFractionDigits:0})}</span></div></div>`;
+}
+
+/* ═══════ SDK ═══════ */
+const dataHandler = {
+  onDataChanged(data) {
+    allData = data;
+    renderOverview();
+    if (activeView==='history')   renderHistory();
+    if (activeView==='portfolio') renderCharts();
+    if (activeView==='track')     renderTrack();
+  }
+};
+(async () => { await window.dataSdk.init(dataHandler); })();
+</script>
+</body>
+</html>
